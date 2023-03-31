@@ -1,8 +1,14 @@
-import tensorflow as tf
+# import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 import numpy as np
 
 
 def preprocess_image(image, train_config):
+    """
+    add poisson or gaussian noise to image
+    the image shape is not altered: width, height, channel
+    """
     pnoise = train_config["poisson_noise_n"]
     gnoise = train_config["gauss_noise_n"]
 
@@ -42,7 +48,7 @@ def preproc_gaussian_noise(image, n):
     return image + nn * get_possion_noise(image)
 
 
-def preproc_color(image, n):
-    n = tf.to_float(n) / 127.5 - 1
-    image += n
-    return tf.clip_by_value(image, -1.0, 1.0)
+# def preproc_color(image, n):
+#     n = tf.to_float(n) / 127.5 - 1
+#     image += n
+#     return tf.clip_by_value(image, -1.0, 1.0)

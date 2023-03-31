@@ -1,5 +1,7 @@
 from __future__ import division
-import tensorflow as tf
+# import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 from ops import *
 from utils import *
 import numpy as np
@@ -18,7 +20,7 @@ def res_manipulator(enc_a,
         probe_pt["mani_diff"] = diff
     for i in range(num_conv):
         p = 3
-        k = 7
+        k = 7 # ??? why kernel size 7?
         diff = tf.pad(diff, [[0, 0], [p, p], [p, p], [0, 0]], "REFLECT")
         cname = 'mani_conv{}'.format(i)
         diff = tf.nn.relu(conv2d(diff, layer_dims, k, 1, padding='VALID', name=cname + 'c'))
@@ -39,6 +41,7 @@ def res_manipulator(enc_a,
 
 
 def res_encoder(image, layer_dims, num_resblk):
+    # partial encoder
     # Justin Johnson's model from https://github.com/jcjohnson/fast-neural-style/
     # The network with 9 blocks consists of: c7s1-32, d64, d128, R128, R128, R128,
     # R128, R128, R128, R128, R128, R128, u64, u32, c7s1-3
@@ -56,12 +59,13 @@ def res_decoder(activation,
                 layer_dims,
                 out_channels,
                 num_resblk):
+    # partial decoder
     r = activation
     for i in range(num_resblk):
         r = residual_block(r, layer_dims, 3, 1, name='decoder_resblk{}'.format(i))
     up = tf.image.resize_nearest_neighbor(r, tf.shape(r)[1:3] * 2)
     up = tf.pad(up, [[0, 0], [1, 1], [1, 1], [0, 0]], "REFLECT")
-    d2 = tf.nn.relu(conv2d(up, int(layer_dims / 2), 3, 1, padding='VALID', name='dec_conv2_c'))
+    d2 = tf.nn.relu(conv2d(up, int(layer_dims / 2), 3, 1, padding='VALID', name='dec_conv2_c')) 
     d2 = tf.pad(d2, [[0, 0], [3, 3], [3, 3], [0, 0]], "REFLECT")
     out = conv2d(d2, out_channels, 7, 1, padding='VALID', name='pred_conv')
     return out

@@ -1,4 +1,12 @@
-import tensorflow as tf
+"""Data loading for training.
+
+Read tfrecords and decode it into corresponding A, B, C, amplified frames with images normalised within -1.0 and 1.0.
+Used for data loading during training.
+"""
+
+# import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 
 def read_and_decode(filename_queue, im_size=(512, 512, 1)):

@@ -1,7 +1,9 @@
 import argparse
 import os
 import shutil
-import tensorflow as tf
+# import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 import setproctitle
 from configobj import ConfigObj
 from validate import Validator
@@ -10,7 +12,7 @@ from magnet import MagNet3Frames
 
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('--phase', dest='phase', default='train',
-                    help='train, test, run, interactive')
+                    help='train, run, run_temporal')
 parser.add_argument('--config_file', dest='config_file', required=True,
                     help='path to config file')
 parser.add_argument('--config_spec', dest='config_spec',
