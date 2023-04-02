@@ -1,3 +1,12 @@
+"""convert frames A, B, C, magnified and MF into tfrecords ready for training.
+
+A, B, C...folders have to be under a folder named 'train', and it looks like path_to_folders/train/frameA. 
+
+Usage:
+
+python convert_3frames_data_to_tfrecords.py --data_dir path_to_folders --out path_to_output --color (to read in color image)
+python convert_3frames_data_to_tfrecords.py --data_dir path_to_folders --out path_to_output (to read in grayscale image)
+"""
 import argparse
 import os
 import glob
@@ -92,7 +101,7 @@ if __name__ == '__main__':
         required=True,
         help='Directory for output .tfrecords files'
     )
-    parser.add_argument('--color', action='store_true', help='Whether to store image as color.')
+    parser.add_argument('--color', required=True, action='store_true', help='Whether to store image as color.')
     FLAGS = parser.parse_args()
 
     # Verify arguments are valid

@@ -532,21 +532,21 @@ class MagNet3Frames(object):
     def _build_training_graph(self, train_config):
         self.global_step = tf.Variable(0, trainable=False)
         filename_queue = tf.train.string_input_producer(
-                            [os.path.join(train_config["training"]["dataset_dir"],
+                            [os.path.join(train_config["dataset_dir"],
                                           'train.tfrecords')],
-                            num_epochs=train_config["training"]["num_epochs"])
+                            num_epochs=train_config["num_epochs"])
 
         # A,C: unperturbed, B: perturbed
         # frameA, frameB, frameC, frameAmp: within -1.0 and 1.0
         frameA, frameB, frameC, frameAmp, amplification_factor = \
             read_and_decode_3frames(filename_queue,
-                                    (train_config["training"]["image_height"],
-                                     train_config["training"]["image_width"],
+                                    (train_config["image_height"],
+                                     train_config["image_width"],
                                      self.n_channels))
         min_after_dequeue = 1000
         num_threads = 16
         capacity = min_after_dequeue + \
-            (num_threads + 2) * train_config["training"]["batch_size"]
+            (num_threads + 2) * train_config["batch_size"]
 
         frameA, frameB, frameC, frameAmp, amplification_factor = \
             tf.train.shuffle_batch([frameA,
@@ -554,7 +554,7 @@ class MagNet3Frames(object):
                                     frameC,
                                     frameAmp,
                                     amplification_factor],
-                                   batch_size=train_config["training"]["batch_size"],
+                                   batch_size=train_config["batch_size"],
                                    capacity=capacity,
                                    num_threads=num_threads,
                                    min_after_dequeue=min_after_dequeue)
@@ -567,14 +567,14 @@ class MagNet3Frames(object):
         self.output = self.image_transformer(frameA,
                                              frameB,
                                              amplification_factor,
-                                             [train_config["training"]["image_height"],
-                                              train_config["training"]["image_width"]],
+                                             [train_config["image_height"],
+                                              train_config["image_width"]],
                                              self.arch_config, True, False)
         self.reg_loss = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-        if self.reg_loss and train_config["training"]["weight_decay"] > 0.0:
+        if self.reg_loss and train_config["weight_decay"] > 0.0:
             print("Adding Regularization Weights.")
             self.loss = self.loss_function(self.output, frameAmp) + \
-                train_config["training"]["weight_decay"] * tf.add_n(self.reg_loss)
+                train_config["weight_decay"] * tf.add_n(self.reg_loss)
         else:
             print("No Regularization Weights.")
             self.loss = self.loss_function(self.output, frameAmp)
@@ -583,8 +583,8 @@ class MagNet3Frames(object):
         with tf.variable_scope('ynet_3frames/encoder', reuse=True):
             texture_c, shape_c = self._encoder(frameC)
             self.loss = self.loss + \
-                train_config["training"]["texture_loss_weight"] * L1_loss(texture_c, self.texture_a) + \
-                train_config["training"]["shape_loss_weight"] * L1_loss(shape_c, self.shape_b)
+                train_config["texture_loss_weight"] * L1_loss(texture_c, self.texture_a) + \
+                train_config["shape_loss_weight"] * L1_loss(shape_c, self.shape_b)
 
         self.loss_sum = tf.summary.scalar('train_loss', self.loss)
         self.image_sum = tf.summary.image('train_B_OUT',
@@ -617,28 +617,28 @@ class MagNet3Frames(object):
     def _loss_function(self, a, b, train_config):
         # Use train_config to implement more advance losses.
         with tf.variable_scope("loss_function"):
-            return L1_loss(a, b) * train_config["training"]["l1_loss_weight"]
+            return L1_loss(a, b) * train_config["l1_loss_weight"]
 
     def train(self, train_config):
         # Define training graphs
         self._build_training_graph(train_config)
 
-        self.lr = tf.train.exponential_decay(train_config["training"]["learning_rate"],
+        self.lr = tf.train.exponential_decay(train_config["learning_rate"],
                                              self.global_step,
-                                             train_config["training"]["decay_steps"],
-                                             train_config["training"]["lr_decay"],
+                                             train_config["decay_steps"],
+                                             train_config["lr_decay"],
                                              staircase=True)
         self.optim_op = tf.train.AdamOptimizer(self.lr,
-                                               beta1=train_config["training"]["beta1"]) \
+                                               beta1=train_config["beta1"]) \
             .minimize(self.loss,
                       var_list=tf.trainable_variables(),
-                      global_step=self.global_step) # ???
+                      global_step=self.global_step) 
 
         ginit_op = tf.global_variables_initializer()
         linit_op = tf.local_variables_initializer()
         self.sess.run([ginit_op, linit_op])
 
-        self.writer = tf.summary.FileWriter(train_config["training"]["logs_dir"],
+        self.writer = tf.summary.FileWriter(train_config["logs_dir"],
                                             self.sess.graph)
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=self.sess, coord=coord)
@@ -646,11 +646,11 @@ class MagNet3Frames(object):
         start_time = time.time()
         for v in tf.trainable_variables():
             print(v)
-        if train_config["training"]["continue_train"] and \
-                self.load(train_config["training"]["checkpoint_dir"]):
+        if train_config["continue_train"] and \
+                self.load(train_config["checkpoint_dir"]):
             print('[*] Load Success')
-        elif train_config["training"]["restore_dir"] and \
-                self.load(train_config["training"]["restore_dir"],
+        elif train_config["restore_dir"] and \
+                self.load(train_config["restore_dir"],
                           tf.train.Saver(var_list=tf.trainable_variables())):
             self.sess.run(self.global_step.assign(0))
             print('[*] Restore success')
